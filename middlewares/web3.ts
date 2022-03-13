@@ -373,17 +373,156 @@ const createWeb3Middleware = (): Middleware => {
             dispatch<any>(getUserPresaleData({ provider, address }))
           }
           break
+        case "nodes/increaseAllowance":
+          {
+            signature = "approve(address,uint256)"
+            params = [contracts.NEXUS_ERC721.address, MAX_UINT256]
+            contractToUse = contracts.NEXUS_ERC20
+            shouldExecute = true
+          }
+          break
+        case "nodes/approveNFT":
+          {
+            signature = "setApprovalForAll(address,bool)"
+            params = [contracts.NEXUS_VAULT.address, true]
+            contractToUse = contracts.NEXUS_ERC721
+            shouldExecute = true
+          }
+          break
+        case "nodes/renameToken":
+          {
+            const { index, name } = action.payload
+            const nodes: UserNode[] = state.nodes.user.nodes
+
+            signature = "setTokenName(uint256,string)"
+            params = [nodes[index].tokenId, name]
+            contractToUse = contracts.NEXUS_ERC721
+            shouldExecute = true
+          }
+          break
         case "nodes/claimRewards":
           {
             const { nodes, count } = state.nodes.user
+            const stakedTokens: number[] = []
 
             requirements.push({
               value: count.staked > 0,
               reason: "No staked tokens in wallet."
             })
 
+            nodes.forEach((node: UserNode) => {
+              if (node.isStaked) stakedTokens.push(node.tokenId)
+            })
+
             signature = "claim(uint256[])"
-            params = [nodes.map((node: UserNode) => node.tokenId)]
+            params = [stakedTokens]
+            contractToUse = contracts.NEXUS_VAULT
+            shouldExecute = true
+          }
+          break
+        case "nodes/unstakeAll":
+          {
+            const { nodes, count } = state.nodes.user
+            const stakedTokens: number[] = []
+
+            requirements.push({
+              value: count.staked > 0,
+              reason: "No staked tokens in wallet."
+            })
+
+            nodes.forEach((node: UserNode) => {
+              if (node.isStaked) stakedTokens.push(node.tokenId)
+            })
+
+            signature = "unstake(uint256[])"
+            params = [stakedTokens]
+            contractToUse = contracts.NEXUS_VAULT
+            shouldExecute = true
+          }
+          break
+        case "nodes/mintNFT":
+          {
+            const { tier, name } = action.payload
+
+            signature = "mintWithTokens(uint256,string)"
+            params = [tier, name]
+            contractToUse = contracts.NEXUS_ERC721
+            shouldExecute = true
+          }
+          break
+        case "nodes/stakeAll":
+          {
+            const { nodes, count } = state.nodes.user
+            const unstakedTokens: number[] = []
+
+            requirements.push({
+              value: count.unstaked > 0,
+              reason: "No unstaked tokens in wallet."
+            })
+
+            nodes.forEach((node: UserNode) => {
+              if (!node.isStaked) unstakedTokens.push(node.tokenId)
+            })
+
+            signature = "stake(uint256[])"
+            params = [unstakedTokens]
+            contractToUse = contracts.NEXUS_VAULT
+            shouldExecute = true
+          }
+          break
+        case "nodes/unstakeByTokenId":
+          {
+            const { index } = action.payload
+            const { nodes }: { nodes: UserNode[] } = state.nodes.user
+
+            requirements.push({
+              value: nodes[index].isStaked,
+              reason: "Token not staked."
+            })
+
+            signature = "unstake(uint256[])"
+            params = [[nodes[index].tokenId]]
+            contractToUse = contracts.NEXUS_VAULT
+            shouldExecute = true
+          }
+          break
+        case "nodes/claimByTokenId":
+          {
+            const { nodes }: { nodes: UserNode[] } = state.nodes.user
+            const { index } = action.payload
+
+            requirements.push({
+              value: nodes[index].isStaked,
+              reason: "Token not staked."
+            })
+
+            signature = "claim(uint256[])"
+            params = [[nodes[index].tokenId]]
+            contractToUse = contracts.NEXUS_VAULT
+            shouldExecute = true
+          }
+          break
+        case "nodes/stakeByTokenId":
+          {
+            const { index } = action.payload
+            const {
+              isStakingApproved,
+              nodes
+            }: { isStakingApproved: boolean; nodes: UserNode[] } =
+              state.nodes.user
+
+            if (!isStakingApproved) {
+              notifyError("Staking not approved.")
+              break
+            }
+
+            requirements.push({
+              value: !nodes[index].isStaked,
+              reason: "Token already staked."
+            })
+
+            signature = "stake(uint256[])"
+            params = [[nodes[index].tokenId]]
             contractToUse = contracts.NEXUS_VAULT
             shouldExecute = true
           }
@@ -392,7 +531,11 @@ const createWeb3Middleware = (): Middleware => {
           {
             const { address } = state.web3
             dispatch<any>(
-              getUserNodeData({ contract: contracts.NEXUS_ERC721, address })
+              getUserNodeData({
+                contract: contracts.NEXUS_ERC721,
+                nxs: contracts.NEXUS_ERC20,
+                address
+              })
             )
           }
           break

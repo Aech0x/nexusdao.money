@@ -55,14 +55,19 @@ const getUserNodeData = createAsyncThunk(
   "nodes/getUserNodeData",
   async ({
     contract,
+    nxs,
     address
   }: {
     contract: ethers.Contract
+    nxs: ethers.Contract
     address: string
   }) => {
     let totalRewards = 0
     const nodes: UserNode[] = []
     const detailedBalance = await contract.getDetailedBalance(address)
+    const allowanceForNXS = parseFloat(
+      ethers.utils.formatEther(await nxs.allowance(address, contract.address))
+    )
 
     const count = {
       staked: 0,
@@ -94,6 +99,7 @@ const getUserNodeData = createAsyncThunk(
       nodes,
       count,
       isStakingApproved,
+      allowanceForNXS,
       totalRewards
     }
   }
@@ -119,6 +125,7 @@ const nodesSlice = createSlice({
         staked: 0,
         unstaked: 0
       },
+      allowanceForNXS: 0,
       isStakingApproved: false,
       totalRewards: 0
     }

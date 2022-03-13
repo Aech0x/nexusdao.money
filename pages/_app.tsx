@@ -8,6 +8,7 @@ import Sidebar from "../components/Sidebar"
 import Topbar from "../components/Topbar"
 
 import { ToastContainer } from "react-toastify"
+import { ModalContextProvider } from "../hooks/useModalContext"
 import "react-toastify/dist/ReactToastify.min.css"
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -27,17 +28,19 @@ function MyApp({ Component, pageProps }: AppProps) {
       </Head>
 
       <Provider store={store}>
-        <div className="flex">
-          <Sidebar />
-          <div className="flex flex-auto bg-gray-100">
-            <div className="w-full mx-auto max-w-4xl px-8">
-              <div className="flex flex-col min-h-screen">
-                <Topbar />
-                <Component {...pageProps} />
+        <ModalContextProvider>
+          <div className="flex">
+            <Sidebar />
+            <div className="flex flex-auto bg-gray-100">
+              <div className="w-full mx-auto max-w-4xl px-8">
+                <div className="flex flex-col min-h-screen">
+                  <Topbar />
+                  <Component {...pageProps} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </ModalContextProvider>
       </Provider>
       <ToastContainer />
     </>

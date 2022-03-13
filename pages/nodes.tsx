@@ -2,10 +2,13 @@ import type { NextPage } from "next"
 import { useSelector, useDispatch } from "react-redux"
 import { RootState } from "../store"
 import { Status } from "../helpers/state"
+import React, { useImperativeHandle, useRef } from "react"
+import { RadioGroup } from "@headlessui/react"
 
 import Card from "../components/Card"
 import Spinner from "../components/Spinner"
 import Table from "../components/Table"
+import useModalContext from "../hooks/useModalContext"
 
 import {
   ArrowCircleUpIcon,
@@ -13,42 +16,160 @@ import {
   HandIcon,
   PencilIcon,
   PlusCircleIcon,
+  ShieldCheckIcon,
   UploadIcon
 } from "@heroicons/react/outline"
 
 import { UserNode, Tier } from "../slices/nodes"
 import Tooltip from "../components/Tooltip"
+import { useState } from "react"
+import { notifyError } from "../helpers/toast"
 
-const Nodes: NextPage = () => {
-  const dispatch = useDispatch()
-  const status = useSelector((state: RootState) => state.nodes.status)
-  const { tiers } = useSelector((state: RootState) => state.nodes.global)
-  const { connected, isValidNetwork } = useSelector(
-    (state: RootState) => state.web3
-  )
+const RenameInput = React.forwardRef<{ name: string }>(function RenameInput(
+  props,
+  ref
+) {
+  const [rename, setRename] = useState("NexusVerse #0")
 
-  const { nodes, totalRewards } = useSelector(
-    (state: RootState) => state.nodes.user
+  useImperativeHandle(
+    ref,
+    () => {
+      return { name: rename }
+    },
+    [rename]
   )
 
   return (
+    <div className="mt-2">
+      <input
+        type="text"
+        value={rename}
+        placeholder="Token Name (length 3-32)"
+        className="w-full bg-gray-200 appearance-none border-2 border-gray-200 rounded-lg py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:border-blue-500"
+        onChange={(e) => {
+          setRename(e.target.value)
+        }}
+      />
+    </div>
+  )
+})
+
+const TierRadioGroup = React.forwardRef<{ tier: number; name: string }>(
+  function TierRadioGroup(props, ref) {
+    const [selectedTier, setSelectedTier] = useState(0)
+    const [mintName, setMintName] = useState("NexusVerse #0")
+
+    useImperativeHandle(
+      ref,
+      () => {
+        return { tier: selectedTier, name: mintName }
+      },
+      [selectedTier, mintName]
+    )
+
+    return (
+      <React.Fragment>
+        <div className="mt-2">
+          <RadioGroup value={selectedTier} onChange={setSelectedTier}>
+            <div className="flex space-x-2 justify-center">
+              <RadioGroup.Option value={Tier.Gold} as={React.Fragment}>
+                {({ checked }) => (
+                  <button
+                    className={
+                      checked
+                        ? "px-2 py-2 bg-blue-600 text-white rounded-lg w-1/3"
+                        : "px-2 py-2 bg-gray-200 rounded-lg w-1/3"
+                    }
+                  >
+                    Gold
+                  </button>
+                )}
+              </RadioGroup.Option>
+              <RadioGroup.Option value={Tier.Silver} as={React.Fragment}>
+                {({ checked }) => (
+                  <button
+                    className={
+                      checked
+                        ? "px-2 py-2 bg-blue-600 text-white rounded-lg w-1/3"
+                        : "px-2 py-2 bg-gray-200 rounded-lg w-1/3"
+                    }
+                  >
+                    Silver
+                  </button>
+                )}
+              </RadioGroup.Option>
+              <RadioGroup.Option value={Tier.Bronze} as={React.Fragment}>
+                {({ checked }) => (
+                  <button
+                    className={
+                      checked
+                        ? "px-2 py-2 bg-blue-600 text-white rounded-lg w-1/3"
+                        : "px-2 py-2 bg-gray-200 rounded-lg w-1/3"
+                    }
+                  >
+                    Bronze
+                  </button>
+                )}
+              </RadioGroup.Option>
+            </div>
+          </RadioGroup>
+        </div>
+        <div className="mt-2">
+          <input
+            type="text"
+            value={mintName}
+            placeholder="Token Name (length 3-32)"
+            className="w-full bg-gray-200 appearance-none border-2 border-gray-200 rounded-lg py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:border-blue-500"
+            onChange={(e) => {
+              setMintName(e.target.value)
+            }}
+          />
+        </div>
+      </React.Fragment>
+    )
+  }
+)
+
+const Nodes: NextPage = () => {
+  const dispatch = useDispatch()
+
+  const { setIsModalVisible, setModalData } = useModalContext()
+  const status = useSelector((state: RootState) => state.nodes.status)
+  const { tiers } = useSelector((state: RootState) => state.nodes.global)
+  const { isBlacklisted, connected, isValidNetwork } = useSelector(
+    (state: RootState) => state.web3
+  )
+
+  const { nodes, totalRewards, allowanceForNXS, isStakingApproved } =
+    useSelector((state: RootState) => state.nodes.user)
+
+  const mintData = useRef({
+    tier: 0,
+    name: "NexusVerse #0"
+  })
+
+  const renameData = useRef({
+    name: "NexusVerse #0"
+  })
+
+  return (
     <>
-      {status.global === Status.Success && status.user === Status.Success ? (
-        <div className="flex flex-col">
+      {status.global === Status.Success ? (
+        <div className="hidden md:flex flex-col">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <Card title="Your Nodes" value={`${nodes.length}/100`} />
 
-            {connected && isValidNetwork ? (
-              <div className="flex items-center justify-center rounded-lg py-4 px-4 bg-white drop-shadow-md">
-                <div className="flex flex-col items-center">
-                  <span className="text-lg font-semibold text-gray-500">
-                    Unclaimed Rewards
-                  </span>
-                  <span className="text-2xl font-bold">
-                    {totalRewards.toFixed(3)}
-                  </span>
-                </div>
+            <div className="flex items-center justify-center rounded-lg py-4 px-4 bg-white drop-shadow-md">
+              <div className="flex flex-col items-center">
+                <span className="text-lg font-semibold text-gray-500">
+                  Unclaimed Rewards
+                </span>
+                <span className="text-2xl font-bold">
+                  {totalRewards.toFixed(3)}
+                </span>
+              </div>
 
+              {connected && isValidNetwork ? (
                 <button
                   className="ml-6 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
                   onClick={() => {
@@ -57,8 +178,8 @@ const Nodes: NextPage = () => {
                 >
                   Claim All
                 </button>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
 
             <Table
               columns={[
@@ -77,6 +198,21 @@ const Nodes: NextPage = () => {
                 <button
                   className="bg-gray-200 hover:bg-blue-600 hover:text-white px-2 py-2 rounded-lg"
                   onClick={() => {
+                    if (!isStakingApproved) {
+                      setModalData({
+                        title: "Approve Staking Contract",
+                        text: "Looks like it's your first time staking. You need to approve staking contract to transfer your NFTs. You only need to do this once. If you've already done it, just reload until this doesn't appear.",
+                        icon: ShieldCheckIcon,
+                        isError: false,
+                        buttonText: "Approve",
+                        buttonFunc: () => {
+                          setIsModalVisible(false)
+                          dispatch({ type: "nodes/" })
+                        }
+                      })
+                      setIsModalVisible(true)
+                      return
+                    }
                     dispatch({ type: "nodes/stakeAll" })
                   }}
                 >
@@ -97,7 +233,53 @@ const Nodes: NextPage = () => {
                 <button
                   className="bg-gray-200 hover:bg-blue-600 hover:text-white px-2 py-2 rounded-lg"
                   onClick={() => {
-                    dispatch({ type: "nodes/mintNFT" })
+                    if (isBlacklisted) {
+                      notifyError("Blacklisted address.")
+                      return
+                    }
+
+                    if (!connected) {
+                      notifyError("Wallet not connected.")
+                      return
+                    }
+
+                    if (!isValidNetwork) {
+                      notifyError("Connected to wrong network.")
+                      return
+                    }
+
+                    if (allowanceForNXS === 0) {
+                      setModalData({
+                        title: "NFT Contract Allowance",
+                        text: "Looks like it's your first time minting. You need to allow NFT contract to deduct your NXS balance. You only need to do this once. If you've already done it, just reload until this doesn't appear.",
+                        icon: ShieldCheckIcon,
+                        isError: false,
+                        buttonText: "Proceed",
+                        buttonFunc: () => {
+                          setIsModalVisible(false)
+                          dispatch({ type: "nodes/increaseAllowance" })
+                        }
+                      })
+                      setIsModalVisible(true)
+                      return
+                    }
+
+                    setModalData({
+                      title: "Mint a NFT",
+                      text: "Select a tier, choose a cool name and click mint.",
+                      icon: PlusCircleIcon,
+                      isError: false,
+                      buttonText: "Mint",
+                      children: <TierRadioGroup ref={mintData} />,
+                      buttonFunc: () => {
+                        setIsModalVisible(false)
+                        dispatch({
+                          type: "nodes/mintNFT",
+                          payload: mintData.current
+                        })
+                      }
+                    })
+                    setIsModalVisible(true)
                   }}
                 >
                   <PlusCircleIcon className="h-10 w-10" />
@@ -147,7 +329,25 @@ const Nodes: NextPage = () => {
                         <button
                           className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
                           onClick={() => {
-                            dispatch({ type: "nodes/renameToken", payload: i })
+                            setModalData({
+                              title: "Rename Token",
+                              text: "Input a cool name and click rename.",
+                              icon: PencilIcon,
+                              isError: false,
+                              buttonText: "Rename",
+                              children: <RenameInput ref={renameData} />,
+                              buttonFunc: () => {
+                                setIsModalVisible(false)
+                                dispatch({
+                                  type: "nodes/renameToken",
+                                  payload: {
+                                    index: i,
+                                    name: renameData.current.name
+                                  }
+                                })
+                              }
+                            })
+                            setIsModalVisible(true)
                           }}
                         >
                           <PencilIcon className="h-5 w-5" />
@@ -177,12 +377,12 @@ const Nodes: NextPage = () => {
                             if (node.isStaked)
                               dispatch({
                                 type: "nodes/unstakeByTokenId",
-                                payload: i
+                                payload: { index: i }
                               })
                             else
                               dispatch({
                                 type: "nodes/stakeByTokenId",
-                                payload: i
+                                payload: { index: i }
                               })
                           }}
                         >
@@ -200,7 +400,7 @@ const Nodes: NextPage = () => {
                           onClick={() => {
                             dispatch({
                               type: "nodes/claimByTokenId",
-                              payload: i
+                              payload: { index: i }
                             })
                           }}
                         >
@@ -219,6 +419,14 @@ const Nodes: NextPage = () => {
           <Spinner />
         </div>
       )}
+      <div className="flex md:hidden flex-col flex-auto justify-center mb-24">
+        <span className="text-2xl sm:text-4xl font-bold text-center">
+          Not supported.
+        </span>
+        <span className="text-xl sm:text-2xl mt-2 text-center">
+          This page is only available on wider screens.
+        </span>
+      </div>
     </>
   )
 }

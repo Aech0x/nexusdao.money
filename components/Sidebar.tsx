@@ -76,7 +76,7 @@ function Content() {
   const dispatch = useDispatch()
 
   return (
-    <div className="flex flex-col shrink-0 min-h-screen justify-between p-8 bg-white w-72 drop-shadow-lg">
+    <div className="flex flex-col shrink-0 min-h-screen justify-between p-8 bg-white w-72 drop-shadow-lg sticky">
       <div className="flex flex-col">
         <Link href="/">
           <a className="flex flex-col items-center group">
