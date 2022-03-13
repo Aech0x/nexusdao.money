@@ -150,7 +150,7 @@ function Content() {
               href={item.link}
               rel="noopener noreferrer"
               target="_blank"
-              className="hover:text-blue-700 w-6 h-6 flex items-center"
+              className="hover:text-blue-700 w-6 h-6 flex items-center cursor-pointer"
               title={item.title}
               key={i}
             >

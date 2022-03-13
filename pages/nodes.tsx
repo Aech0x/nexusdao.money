@@ -17,6 +17,7 @@ import {
 } from "@heroicons/react/outline"
 
 import { UserNode, Tier } from "../slices/nodes"
+import Tooltip from "../components/Tooltip"
 
 const Nodes: NextPage = () => {
   const dispatch = useDispatch()
@@ -142,56 +143,70 @@ const Nodes: NextPage = () => {
                   rewards: `${node.rewards.toFixed(3)} NXS`,
                   actions: (
                     <div className="flex items-center justify-center gap-x-2">
-                      <button
-                        className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
-                        onClick={() => {
-                          dispatch({ type: "nodes/renameToken", payload: i })
-                        }}
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
+                      <Tooltip tooltipText="edit name">
+                        <button
+                          className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                          onClick={() => {
+                            dispatch({ type: "nodes/renameToken", payload: i })
+                          }}
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                      </Tooltip>
 
-                      <button
-                        className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
-                        onClick={() => {
-                          dispatch({
-                            type: "nodes/upgradeToken",
-                            payload: i
-                          })
-                        }}
-                      >
-                        <ArrowCircleUpIcon className="h-5 w-5" />
-                      </button>
-
-                      <button
-                        className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
-                        onClick={() => {
-                          if (node.isStaked)
+                      <Tooltip tooltipText="upgrade tier">
+                        <button
+                          className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                          onClick={() => {
                             dispatch({
-                              type: "nodes/unstakeByTokenId",
+                              type: "nodes/upgradeToken",
                               payload: i
                             })
-                          else
+                          }}
+                        >
+                          <ArrowCircleUpIcon className="h-5 w-5" />
+                        </button>
+                      </Tooltip>
+
+                      <Tooltip
+                        tooltipText={node.isStaked ? "unstake" : "stake"}
+                      >
+                        <button
+                          className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                          onClick={() => {
+                            if (node.isStaked)
+                              dispatch({
+                                type: "nodes/unstakeByTokenId",
+                                payload: i
+                              })
+                            else
+                              dispatch({
+                                type: "nodes/stakeByTokenId",
+                                payload: i
+                              })
+                          }}
+                        >
+                          {node.isStaked ? (
+                            <UploadIcon className="h-5 w-5" />
+                          ) : (
+                            <DownloadIcon className="h-5 w-5" />
+                          )}
+                        </button>
+                      </Tooltip>
+
+                      <Tooltip tooltipText="claim">
+                        <button
+                          className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                          onClick={() => {
                             dispatch({
-                              type: "nodes/stakeByTokenId",
+                              type: "nodes/claimByTokenId",
                               payload: i
                             })
-                        }}
-                      >
-                        {node.isStaked ? (
-                          <UploadIcon className="h-5 w-5" />
-                        ) : (
-                          <DownloadIcon className="h-5 w-5" />
-                        )}
-                      </button>
-                      <button
-                        className="py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
-                        onClick={() => {
-                          dispatch({ type: "nodes/claimByTokenId", payload: i })
-                        }}
-                      >
-                        <HandIcon className="h-5 w-5" />
-                      </button>
+                          }}
+                        >
+                          <HandIcon className="h-5 w-5" />
+                        </button>
+                      </Tooltip>
                     </div>
                   )
                 }
